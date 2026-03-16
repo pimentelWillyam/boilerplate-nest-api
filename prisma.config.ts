@@ -7,8 +7,6 @@ dotenv.config({
   path: `.env.${env}`,
 });
 
-dotenv.config(); // fallback para .env
-
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
