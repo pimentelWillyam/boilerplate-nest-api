@@ -6,19 +6,19 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "start": "nest start",
-    "dev": "nest start --watch",
+    "start": "cross-env NODE_ENV=prod nest start",
+    "dev": "cross-env NODE_ENV=dev nest start --watch",
     "build": "nest build",
     "postinstall": "prisma generate",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "prisma:migrate:dev": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy",
-    "prisma:reset": "prisma migrate reset",
+    "prisma:migrate:dev": "cross-env NODE_ENV=dev prisma migrate dev",
+    "prisma:deploy": "cross-env NODE_ENV=prod prisma migrate deploy",
+    "prisma:reset": "cross-env NODE_ENV=dev prisma migrate reset",
     "prisma:generate": "prisma generate",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "cross-env NODE_ENV=dev prisma studio"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
