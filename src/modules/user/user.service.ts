@@ -1,23 +1,15 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common'
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import * as bcrypt from 'bcrypt'
-import { PrismaService } from '../../infra/database/prisma.service'
+import { InjectRepository } from '@nestjs/typeorm'
+import { Repository } from 'typeorm'
+import { User } from './user.entity'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { UserResponseDto } from './dto/user-response.dto'
 
 const SALT_ROUNDS = 10
 
-function toUserResponse(user: {
-  id: string
-  email: string
-  login: string
-  createdAt: Date
-  updatedAt: Date
-}): UserResponseDto {
+function toUserResponse(user: User): UserResponseDto {
   return {
     id: user.id,
     email: user.email,
@@ -29,48 +21,44 @@ function toUserResponse(user: {
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: createUserDto.email },
-          { login: createUserDto.login },
-        ],
-      },
+    const existingUser = await this.userRepository.findOne({
+      where: [{ email: createUserDto.email }, { login: createUserDto.login }],
     })
 
     if (existingUser) {
-      const field = existingUser.email === createUserDto.email ? 'email' : 'login'
+      const field =
+        existingUser.email === createUserDto.email ? 'email' : 'login'
       throw new ConflictException(`O ${field} informado já está em uso`)
     }
 
-    const hashedPassword = await bcrypt.hash(
-      createUserDto.password,
-      SALT_ROUNDS,
-    )
+    const hashedPassword = await bcrypt.hash(createUserDto.password, SALT_ROUNDS)
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: createUserDto.email,
-        login: createUserDto.login,
-        password: hashedPassword,
-      },
+    const user = this.userRepository.create({
+      email: createUserDto.email,
+      login: createUserDto.login,
+      password: hashedPassword,
     })
+
+    await this.userRepository.save(user)
 
     return toUserResponse(user)
   }
 
   async findAll(): Promise<UserResponseDto[]> {
-    const users = await this.prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
+    const users = await this.userRepository.find({
+      order: { createdAt: 'DESC' },
     })
     return users.map(toUserResponse)
   }
 
   async findOne(id: string): Promise<UserResponseDto> {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.userRepository.findOne({
       where: { id },
     })
 
@@ -81,11 +69,8 @@ export class UserService {
     return toUserResponse(user)
   }
 
-  async update(
-    id: string,
-    updateUserDto: UpdateUserDto,
-  ): Promise<UserResponseDto> {
-    const user = await this.prisma.user.findUnique({
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<UserResponseDto> {
+    const user = await this.userRepository.findOne({
       where: { id },
     })
 
@@ -94,7 +79,7 @@ export class UserService {
     }
 
     if (updateUserDto.email && updateUserDto.email !== user.email) {
-      const emailInUse = await this.prisma.user.findUnique({
+      const emailInUse = await this.userRepository.findOne({
         where: { email: updateUserDto.email },
       })
       if (emailInUse) {
@@ -103,7 +88,7 @@ export class UserService {
     }
 
     if (updateUserDto.login && updateUserDto.login !== user.login) {
-      const loginInUse = await this.prisma.user.findUnique({
+      const loginInUse = await this.userRepository.findOne({
         where: { login: updateUserDto.login },
       })
       if (loginInUse) {
@@ -111,24 +96,25 @@ export class UserService {
       }
     }
 
-    const data: { email?: string; login?: string; password?: string } = {
-      ...updateUserDto,
-    }
-
     if (updateUserDto.password) {
-      data.password = await bcrypt.hash(updateUserDto.password, SALT_ROUNDS)
+      user.password = await bcrypt.hash(updateUserDto.password, SALT_ROUNDS)
     }
 
-    const updatedUser = await this.prisma.user.update({
-      where: { id },
-      data,
-    })
+    if (updateUserDto.email) {
+      user.email = updateUserDto.email
+    }
+
+    if (updateUserDto.login) {
+      user.login = updateUserDto.login
+    }
+
+    const updatedUser = await this.userRepository.save(user)
 
     return toUserResponse(updatedUser)
   }
 
   async remove(id: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.userRepository.findOne({
       where: { id },
     })
 
@@ -136,8 +122,6 @@ export class UserService {
       throw new NotFoundException(`Usuário com id ${id} não encontrado`)
     }
 
-    await this.prisma.user.delete({
-      where: { id },
-    })
+    await this.userRepository.remove(user)
   }
 }
