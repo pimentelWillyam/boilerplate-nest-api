@@ -10,22 +10,22 @@ import {
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id!: string
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 255 })
-  email: string
+  email!: string
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 100 })
-  login: string
+  login!: string
 
   @Column({ type: 'varchar', select: false })
-  password: string
+  password!: string
 
   @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date
+  createdAt!: Date
 
   @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt: Date
+  updatedAt!: Date
 }
