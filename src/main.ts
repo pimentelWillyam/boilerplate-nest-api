@@ -19,6 +19,16 @@ export class Application {
     const port = configService.get<number>('port') ?? 3000
     await app.listen(port)
     console.log(`Server is running on port ${port}`)
+    console.log(
+                `
+                GET localhost:${port}/
+                POST localhost:${port}/user
+                GET localhost:${port}/user
+                GET localhost:${port}/user/:id
+                PATCH localhost:${port}/user/:id
+                DELETE localhost:${port}/user/:id
+                `
+              )
   }
 }
 
